@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plataforma de Tareas y Publicidad</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Estilos de soporte */
+    .tab-active {
+      border-bottom: 2px solid #3b82f6;
+      color: #3b82f6;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- Barra de Navegación Principal -->
+  <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50 shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow">
+          PTC
+        </div>
+        <div>
+          <span class="font-bold text-base tracking-wide text-white block">RewardAds Platform</span>
+          <span class="text-[11px] text-slate-400">Sistema Integral de Tareas y Publicidad</span>
+        </div>
+      </div>
+
+      <!-- Barra de Balances Globales -->
+      <div class="flex items-center gap-3 text-xs">
+        <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+          <span class="text-slate-400 block text-[10px] uppercase font-semibold">Tus Ganancias</span>
+          <span id="navUserBalance" class="font-bold text-emerald-400 text-sm">$0.0000 USD</span>
+        </div>
+        <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+          <span class="text-slate-400 block text-[10px] uppercase font-semibold">Saldo Anunciante</span>
+          <span id="navAdvBalance" class="font-bold text-blue-400 text-sm">$0.00 USD</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pestañas de Roles / Módulos -->
+    <nav class="max-w-6xl mx-auto px-4 flex gap-2 border-t border-slate-700/60 overflow-x-auto text-xs sm:text-sm">
+      <button onclick="navigate('ads')" id="nav-btn-ads" class="px-4 py-2.5 tab-active transition whitespace-nowrap">
+        📺 Ver Anuncios (Ganar Dinero)
+      </button>
+      <button onclick="navigate('advertiser')" id="nav-btn-advertiser" class="px-4 py-2.5 text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
+        📢 Panel de Anunciante
+      </button>
+      <button onclick="navigate('wallet')" id="nav-btn-wallet" class="px-4 py-2.5 text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
+        💰 Billetera y Retiros
+      </button>
+      <button onclick="navigate('admin')" id="nav-btn-admin" class="px-4 py-2.5 text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
+        ⚙️ SuperAdmin
+      </button>
+    </nav>
+  </header>
+
+  <!-- Contenedor Principal Dinámico -->
+  <main class="max-w-6xl mx-auto px-4 py-6 flex-1 w-full">
+
+    <!-- ==================== SECCIÓN 1: VER ANUNCIOS ==================== -->
+    <section id="view-ads" class="space-y-6">
+      
+      <!-- Listado de Anuncios Disponibles -->
+      <div id="adsListContainer">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white">Anuncios Disponibles para Hoy</h2>
+            <p class="text-xs text-slate-400">Haz clic en un anuncio, visualízalo durante el tiempo requerido y recibe tu recompensa.</p>
+          </div>
+          <button onclick="loadAvailableAds()" class="text-xs text-blue-400 hover:underline">↻ Actualizar lista</button>
+        </div>
+
+        <div id="availableAdsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Cargado dinámicamente con JS -->
+        </div>
+      </div>
+
+      <!-- Visor de Anuncio en Tiempo Real (Oculto hasta hacer clic) -->
+      <div id="adViewerContainer" class="hidden bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 pb-4">
+          <div>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 uppercase">Tarea en progreso</span>
+            <h3 id="currentAdTitle" class="text-base font-bold text-white mt-1">Cargando anuncio...</h3>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block">Recompensa al finalizar</span>
+            <span id="currentAdReward" class="text-base font-bold text-emerald-400">+$0.0000 USD</span>
+          </div>
+        </div>
+
+        <!-- Barra de Progreso y Temporizador -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span id="timerStatus" class="font-medium text-amber-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+              Visualizando contenido...
+            </span>
+            <span id="timerSeconds" class="font-mono font-bold text-white">15s restantes</span>
+          </div>
+          <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-700">
+            <div id="progressBar" class="bg-blue-600 h-full w-0 transition-all duration-300 ease-linear"></div>
+          </div>
+        </div>
+
+        <!-- Alerta de pestaña oculta -->
+        <div id="visibilityAlert" class="hidden p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-xs">
+          ⚠️ <strong>Temporizador en pausa:</strong> No cambies de pestaña para poder acreditar tu pago.
+        </div>
+
+        <!-- Reto de Verificación Humana -->
+        <div id="captchaBox" class="hidden p-4 bg-slate-900 border border-emerald-500/30 rounded-xl text-center space-y-3">
+          <p id="captchaQuestion" class="text-sm font-medium text-slate-200">
+            ¡Tiempo completado! Selecciona el número correcto para reclamar tus fondos:
+          </p>
+          <div id="captchaButtons" class="flex items-center justify-center gap-2 flex-wrap"></div>
+        </div>
+
+        <!-- Simulación del Sitio Web Anunciado -->
+        <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 min-h-[240px] flex flex-col items-center justify-center text-center space-y-3">
+          <div class="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-xl font-bold">
+            🌐
+          </div>
+          <h4 id="advertiserLandingTitle" class="text-xl font-bold text-white">Sitio del Anunciante</h4>
+          <p id="advertiserLandingDesc" class="text-xs text-slate-400 max-w-md">Contenido patrocinado verificado.</p>
+          <a id="advertiserLandingLink" href="#" target="_blank" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition">
+            Abrir Sitio en Nueva Pestaña ↗
+          </a>
+        </div>
+
+        <!-- Botón Salir / Cancelar -->
+        <div class="flex justify-end pt-2">
+          <button onclick="closeAdViewer()" class="px-4 py-2 text-xs text-slate-400 hover:text-slate-200">
+            ✕ Volver a la lista
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== SECCIÓN 2: PANEL DE ANUNCIANTE ==================== -->
+    <section id="view-advertiser" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800 p-5 rounded-2xl border border-slate-700">
+        <div>
+          <h2 class="text-lg font-bold text-white">Panel de Anunciante</h2>
+          <p class="text-xs text-slate-400">Crea campañas de tráfico garantizado con retención verificada.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate-400">Crédito publicitario:</span>
+          <span id="advBalanceSection" class="text-base font-bold text-blue-400">$0.00 USD</span>
+        </div>
+      </div>
+
+      <!-- Formulario para Crear Campaña -->
+      <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-4">
+        <h3 class="text-sm font-bold text-white border-b border-slate-700 pb-2">Crear Nueva Campaña de Anuncio</h3>
+        
+        <form id="createCampaignForm" onsubmit="submitNewCampaign(event)" class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Título del Anuncio *</label>
+              <input type="text" id="campTitle" required placeholder="Ej: Registro en Billetera Digital" 
+                class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">URL de Destino *</label>
+              <input type="url" id="campUrl" required placeholder="https://misitio.com" 
+                class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Tiempo de Permanencia Requerido</label>
+              <select id="campDuration" onchange="calcCampBudget()" 
+                class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500">
+                <option value="15">15 Segundos ($0.020 por visita)</option>
+                <option value="30">30 Segundos ($0.035 por visita)</option>
+                <option value="60">60 Segundos ($0.060 por visita)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Cantidad de Visitas Deseadas</label>
+              <input type="number" id="campViews" min="50" step="50" value="100" oninput="calcCampBudget()" required
+                class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+
+          <div class="p-3 bg-slate-900 border border-blue-500/30 rounded-xl flex items-center justify-between">
+            <span class="text-slate-400">Presupuesto Total Requerido:</span>
+            <span id="campBudgetPreview" class="text-base font-bold text-blue-400">$2.00 USD</span>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition">
+              🚀 Lanzar Campaña
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tabla de Campañas Publicadas -->
+      <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3">
+        <h3 class="text-sm font-bold text-white">Todas las Campañas Publicadas</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900 text-slate-400 uppercase">
+              <tr>
+                <th class="p-3">Título / Enlace</th>
+                <th class="p-3">Duración</th>
+                <th class="p-3">Vistas</th>
+                <th class="p-3">Presupuesto Restante</th>
+                <th class="p-3">Estado</th>
+                <th class="p-3 text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="allCampaignsTable" class="divide-y divide-slate-700">
+              <!-- Cargado con JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECCIÓN 3: BILLETERA Y RETIROS ==================== -->
+    <section id="view-wallet" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800 p-5 rounded-2xl border border-slate-700">
+        <div>
+          <h2 class="text-lg font-bold text-white">Mi Billetera de Pagos</h2>
+          <p class="text-xs text-slate-400">Solicita transferencias de tus ingresos acumulados.</p>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-slate-400 block">Saldo Retirable</span>
+          <span id="walletAvailableBalance" class="text-xl font-extrabold text-emerald-400">$0.0000 USD</span>
+        </div>
+      </div>
+
+      <!-- Formulario de Retiro -->
+      <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-4">
+        <h3 class="text-sm font-bold text-white border-b border-slate-700 pb-2">Solicitar Nuevo Retiro</h3>
+        <form id="withdrawForm" onsubmit="submitWithdrawal(event)" class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Método de Cobro *</label>
+              <select id="withMethod" onchange="calcWithdrawalFee()" 
+                class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500">
+                <option value="USDT TRC-20">USDT (TRC-20) - Comisión fija $1.00 USD</option>
+                <option value="Binance Pay">Binance Pay (Pay ID / Email) - Sin comisión</option>
+                <option value="PayPal">PayPal - Comisión 2.0%</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Monto a Retirar (USD) *</label>
+              <input type="number" id="withAmount" min="5" step="0.5" value="5" oninput="calcWithdrawalFee()" required
+                class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500">
+              <span class="text-[11px] text-slate-400">Mínimo de retiro: $5.00 USD</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Dirección / Cuenta Destino *</label>
+            <input type="text" id="withDestination" required placeholder="Ej: Dirección TRC-20 o usuario@correo.com" 
+              class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500">
+          </div>
+
+          <div class="p-3 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-between">
+            <span class="text-slate-400">Neto estimado a recibir:</span>
+            <span id="withNetLabel" class="text-base font-bold text-emerald-400">$4.00 USD</span>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow transition">
+              Confirmar Solicitud de Retiro
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Historial de Pagos -->
+      <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3">
+        <h3 class="text-sm font-bold text-white">Historial de Solicitudes</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900 text-slate-400 uppercase">
+              <tr>
+                <th class="p-3">ID / Fecha</th>
+                <th class="p-3">Método</th>
+                <th class="p-3">Destino</th>
+                <th class="p-3">Monto</th>
+                <th class="p-3">Neto</th>
+                <th class="p-3">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="withdrawalsTable" class="divide-y divide-slate-700">
+              <!-- Cargado con JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECCIÓN 4: SUPERADMIN ==================== -->
+    <section id="view-admin" class="hidden space-y-6">
+      <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 uppercase">SuperAdmin</span>
+          <h2 class="text-lg font-bold text-white mt-1">Consola de Control del Sistema</h2>
+          <p class="text-xs text-slate-400">Supervisión en tiempo real de márgenes y solicitudes.</p>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-slate-400 block">Margen Generado por la Plataforma</span>
+          <span id="adminPlatformMargin" class="text-xl font-bold text-blue-400">$0.00 USD</span>
+        </div>
+      </div>
+
+      <!-- Cola de Retiros Pendientes -->
+      <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3">
+        <h3 class="text-sm font-bold text-white">Cola de Retiros por Aprobar</h3>
+        <div id="adminPendingWithdrawalsList" class="space-y-3">
+          <!-- Cargado con JS -->
+        </div>
+      </div>
+
+      <!-- Campañas en Revisión -->
+      <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3">
+        <h3 class="text-sm font-bold text-white">Campañas Pendientes de Moderación</h3>
+        <div id="adminPendingAdsList" class="space-y-3">
+          <!-- Cargado con JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-slate-800 border-t border-slate-700 py-3 text-center text-xs text-slate-500">
+    RewardAds Platform • Servidor local operativo con SQLite y Python REST API
+  </footer>
+
+  <!-- Script Lógica Frontend -->
+  <script>
+    let activeToken = null;
+    let timerInterval = null;
+    let remainingSeconds = 15;
+    let currentAd = null;
+    let isPaused = false;
+    let isCompleted = false;
+
+    // Navegación entre pestañas
+    function navigate(tabName) {
+      ['ads', 'advertiser', 'wallet', 'admin'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.add('hidden');
+        document.getElementById(`nav-btn-${t}`).className = 'px-4 py-2.5 text-slate-400 hover:text-slate-200 transition whitespace-nowrap';
+      });
+
+      document.getElementById(`view-${tabName}`).classList.remove('hidden');
+      document.getElementById(`nav-btn-${tabName}`).className = 'px-4 py-2.5 tab-active transition whitespace-nowrap';
+
+      if (tabName === 'ads') loadAvailableAds();
+      if (tabName === 'advertiser') loadAllCampaigns();
+      if (tabName === 'wallet') loadWithdrawals();
+      if (tabName === 'admin') loadAdminMetrics();
+    }
+
+    // Cargar información del usuario y balances
+    async function loadUserData() {
+      try {
+        const res = await fetch('/api/user');
+        const data = await res.json();
+        document.getElementById('navUserBalance').textContent = `$${data.user.balance_earnings.toFixed(4)} USD`;
+        document.getElementById('walletAvailableBalance').textContent = `$${data.user.balance_earnings.toFixed(4)} USD`;
+        document.getElementById('navAdvBalance').textContent = `$${data.advertiser_balance.toFixed(2)} USD`;
+        document.getElementById('advBalanceSection').textContent = `$${data.advertiser_balance.toFixed(2)} USD`;
+      } catch (err) {
+        console.error('Error cargando usuario:', err);
+      }
+    }
+
+    // 1. Módulo: Ver Anuncios
+    async function loadAvailableAds() {
+      try {
+        const res = await fetch('/api/ads');
+        const ads = await res.json();
+        const grid = document.getElementById('availableAdsGrid');
+        grid.innerHTML = '';
+
+        if (ads.length === 0) {
+          grid.innerHTML = '<div class="col-span-3 text-center p-6 text-slate-400">No hay anuncios activos por el momento. Crea uno en el Panel de Anunciante.</div>';
+          return;
+        }
+
+        ads.forEach(ad => {
+          const card = document.createElement('div');
+          card.className = 'bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col justify-between hover:border-blue-500 transition shadow';
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center justify-between text-xs mb-2">
+                <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-semibold">${ad.duration_seconds} seg</span>
+                <span class="font-bold text-emerald-400">+$${ad.user_reward.toFixed(4)} USD</span>
+              </div>
+              <h4 class="font-bold text-sm text-white">${ad.title}</h4>
+              <p class="text-xs text-slate-400 mt-1 line-clamp-2">${ad.description || 'Visita este sitio web y mantente activo para ganar saldo.'}</p>
+            </div>
+            <button onclick="startAdView(${ad.id}, '${ad.title.replace(/'/g, "\\'")}', ${ad.user_reward}, ${ad.duration_seconds}, '${ad.target_url}', '${(ad.description || '').replace(/'/g, "\\'")}')" 
+              class="mt-4 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition">
+              ▶ Ver Anuncio
+            </button>
+          `;
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        console.error('Error cargando anuncios:', err);
+      }
+    }
+
+    async function startAdView(id, title, reward, duration, targetUrl, desc) {
+      try {
+        const res = await fetch('/api/ads/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaign_id: id })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        activeToken = data.session_token;
+        remainingSeconds = data.duration_seconds;
+        currentAd = { title, reward, duration: data.duration_seconds };
+        isPaused = false;
+        isCompleted = false;
+
+        document.getElementById('adsListContainer').classList.add('hidden');
+        document.getElementById('adViewerContainer').classList.remove('hidden');
+
+        document.getElementById('currentAdTitle').textContent = title;
+        document.getElementById('currentAdReward').textContent = `+$${reward.toFixed(4)} USD`;
+        document.getElementById('advertiserLandingTitle').textContent = title;
+        document.getElementById('advertiserLandingDesc').textContent = desc || targetUrl;
+        document.getElementById('advertiserLandingLink').href = targetUrl;
+
+        document.getElementById('captchaBox').classList.add('hidden');
+        document.getElementById('visibilityAlert').classList.add('hidden');
+        document.getElementById('timerStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Visualizando contenido...';
+        document.getElementById('timerStatus').className = 'font-medium text-amber-400 flex items-center gap-1.5';
+
+        runCountdown();
+      } catch (err) {
+        alert('Error al iniciar el anuncio');
+      }
+    }
+
+    function runCountdown() {
+      clearInterval(timerInterval);
+      updateTimerUI();
+
+      timerInterval = setInterval(() => {
+        if (!isPaused && remainingSeconds > 0) {
+          remainingSeconds--;
+          updateTimerUI();
+
+          if (remainingSeconds <= 0) {
+            clearInterval(timerInterval);
+            showCaptcha();
+          }
+        }
+      }, 1000);
+    }
+
+    function updateTimerUI() {
+      const percent = ((currentAd.duration - remainingSeconds) / currentAd.duration) * 100;
+      document.getElementById('progressBar').style.width = `${percent}%`;
+      document.getElementById('timerSeconds').textContent = `${remainingSeconds}s restantes`;
+    }
+
+    // Page Visibility API
+    document.addEventListener('visibilitychange', () => {
+      if (isCompleted || !activeToken) return;
+
+      if (document.hidden) {
+        isPaused = true;
+        document.getElementById('visibilityAlert').classList.remove('hidden');
+        document.getElementById('timerStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span> Pausado (Pestaña inactiva)';
+        document.getElementById('timerStatus').className = 'font-medium text-rose-500 flex items-center gap-1.5';
+      } else {
+        isPaused = false;
+        document.getElementById('visibilityAlert').classList.add('hidden');
+        document.getElementById('timerStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Visualizando contenido...';
+        document.getElementById('timerStatus').className = 'font-medium text-amber-400 flex items-center gap-1.5';
+      }
+    });
+
+    function showCaptcha() {
+      document.getElementById('progressBar').style.width = '100%';
+      document.getElementById('timerStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-blue-400"></span> Reto de Verificación';
+      document.getElementById('timerStatus').className = 'font-medium text-blue-400 flex items-center gap-1.5';
+
+      const correctNum = Math.floor(Math.random() * 5) + 1;
+      document.getElementById('captchaQuestion').innerHTML = `¡Tiempo cumplido! Haz clic en el <strong>número ${correctNum}</strong> para acreditar tus ganancias:`;
+
+      const container = document.getElementById('captchaButtons');
+      container.innerHTML = '';
+      [1, 2, 3, 4, 5].sort(() => Math.random() - 0.5).forEach(num => {
+        const btn = document.createElement('button');
+        btn.textContent = num;
+        btn.className = 'w-10 h-10 rounded-lg bg-slate-800 hover:bg-blue-600 border border-slate-700 font-bold text-sm text-white transition';
+        btn.onclick = () => claimReward(num, correctNum);
+        container.appendChild(btn);
+      });
+
+      document.getElementById('captchaBox').classList.remove('hidden');
+    }
+
+    async function claimReward(selected, correct) {
+      if (selected !== correct) {
+        alert('Número incorrecto. Intenta nuevamente.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/ads/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_token: activeToken })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          alert('Error de validación: ' + data.error);
+          return;
+        }
+
+        isCompleted = true;
+        activeToken = null;
+        alert(`🎉 ¡Excelente! Se acreditaron +$${data.reward_credited.toFixed(4)} USD a tu cuenta.`);
+        loadUserData();
+        closeAdViewer();
+      } catch (err) {
+        alert('Error conectando con el servidor.');
+      }
+    }
+
+    function closeAdViewer() {
+      clearInterval(timerInterval);
+      activeToken = null;
+      document.getElementById('adViewerContainer').classList.add('hidden');
+      document.getElementById('adsListContainer').classList.remove('hidden');
+      loadAvailableAds();
+    }
+
+    // 2. Módulo: Anunciante
+    function calcCampBudget() {
+      const dur = parseInt(document.getElementById('campDuration').value);
+      const views = parseInt(document.getElementById('campViews').value) || 0;
+      const prices = { 15: 0.02, 30: 0.035, 60: 0.06 };
+      const total = (prices[dur] || 0.02) * views;
+      document.getElementById('campBudgetPreview').textContent = `$${total.toFixed(2)} USD`;
+    }
+
+    async function submitNewCampaign(e) {
+      e.preventDefault();
+      const title = document.getElementById('campTitle').value;
+      const target_url = document.getElementById('campUrl').value;
+      const duration_seconds = parseInt(document.getElementById('campDuration').value);
+      const total_views = parseInt(document.getElementById('campViews').value);
+
+      try {
+        const res = await fetch('/api/campaigns', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, target_url, duration_seconds, total_views })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        alert('¡Campaña creada con éxito!');
+        document.getElementById('createCampaignForm').reset();
+        calcCampBudget();
+        loadUserData();
+        loadAllCampaigns();
+      } catch (err) {
+        alert('Error al crear campaña.');
+      }
+    }
+
+    async function loadAllCampaigns() {
+      try {
+        const res = await fetch('/api/campaigns');
+        const list = await res.json();
+        const tbody = document.getElementById('allCampaignsTable');
+        tbody.innerHTML = '';
+
+        list.forEach(c => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-slate-900/50 transition';
+          row.innerHTML = `
+            <td class="p-3">
+              <span class="font-bold text-white block">${c.title}</span>
+              <span class="text-[11px] text-slate-400 truncate max-w-xs block">${c.target_url}</span>
+            </td>
+            <td class="p-3">${c.duration_seconds} seg</td>
+            <td class="p-3">${c.views_delivered} / ${c.total_views}</td>
+            <td class="p-3 font-semibold text-blue-400">$${c.remaining_budget.toFixed(2)}</td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}">
+                ${c.status.toUpperCase()}
+              </span>
+            </td>
+            <td class="p-3 text-right">
+              <button onclick="toggleCampaign(${c.id})" class="text-xs text-blue-400 hover:underline">
+                ${c.status === 'active' ? 'Pausar' : 'Activar'}
+              </button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Error cargando campañas:', err);
+      }
+    }
+
+    async function toggleCampaign(id) {
+      await fetch('/api/campaigns/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign_id: id })
+      });
+      loadAllCampaigns();
+    }
+
+    // 3. Módulo: Billetera y Retiros
+    function calcWithdrawalFee() {
+      const method = document.getElementById('withMethod').value;
+      const amount = parseFloat(document.getElementById('withAmount').value) || 0;
+      let fee = method === 'USDT TRC-20' ? 1.0 : (method === 'PayPal' ? amount * 0.02 : 0);
+      const net = Math.max(0, amount - fee);
+      document.getElementById('withNetLabel').textContent = `$${net.toFixed(2)} USD (Comisión: $${fee.toFixed(2)})`;
+    }
+
+    async function submitWithdrawal(e) {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('withAmount').value);
+      const payment_method = document.getElementById('withMethod').value;
+      const destination_account = document.getElementById('withDestination').value;
+
+      try {
+        const res = await fetch('/api/withdrawals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, payment_method, destination_account })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        alert('¡Solicitud de retiro enviada!');
+        document.getElementById('withdrawForm').reset();
+        calcWithdrawalFee();
+        loadUserData();
+        loadWithdrawals();
+      } catch (err) {
+        alert('Error procesando retiro');
+      }
+    }
+
+    async function loadWithdrawals() {
+      try {
+        const res = await fetch('/api/withdrawals');
+        const list = await res.json();
+        const tbody = document.getElementById('withdrawalsTable');
+        tbody.innerHTML = '';
+
+        list.forEach(w => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-slate-900/50 transition';
+          row.innerHTML = `
+            <td class="p-3 font-semibold text-white">#TX-${w.id}</td>
+            <td class="p-3">${w.payment_method}</td>
+            <td class="p-3 font-mono text-[11px] text-slate-300">${w.destination_account}</td>
+            <td class="p-3">$${w.amount.toFixed(2)}</td>
+            <td class="p-3 font-bold text-emerald-400">$${w.net_amount.toFixed(2)}</td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${w.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' : (w.status === 'pending' ? 'bg-amber-500/10 text-amber-400' : 'bg-rose-500/10 text-rose-400')}">
+                ${w.status.toUpperCase()}
+              </span>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Error cargando retiros:', err);
+      }
+    }
+
+    // 4. Módulo: SuperAdmin
+    async function loadAdminMetrics() {
+      try {
+        const res = await fetch('/api/admin/metrics');
+        const data = await res.json();
+
+        document.getElementById('adminPlatformMargin').textContent = `$${data.platform_margin.toFixed(4)} USD`;
+
+        // Retiros pendientes
+        const wContainer = document.getElementById('adminPendingWithdrawalsList');
+        wContainer.innerHTML = '';
+        if (data.pending_withdrawals.length === 0) {
+          wContainer.innerHTML = '<p class="text-xs text-slate-400">No hay retiros pendientes de revisión.</p>';
+        } else {
+          data.pending_withdrawals.forEach(w => {
+            const card = document.createElement('div');
+            card.className = 'p-3 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-between gap-3 text-xs';
+            card.innerHTML = `
+              <div>
+                <span class="font-bold text-white block">Retiro #TX-${w.id} - $${w.amount.toFixed(2)} USD</span>
+                <span class="text-slate-400">${w.payment_method}: <span class="font-mono text-slate-300">${w.destination_account}</span></span>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="adminActionWithdrawal(${w.id}, 'reject')" class="px-3 py-1 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white rounded-lg transition">Rechazar</button>
+                <button onclick="adminActionWithdrawal(${w.id}, 'approve')" class="px-3 py-1 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition">Aprobar</button>
+              </div>
+            `;
+            wContainer.appendChild(card);
+          });
+        }
+
+        // Anuncios pendientes
+        const aContainer = document.getElementById('adminPendingAdsList');
+        aContainer.innerHTML = '';
+        if (data.pending_ads.length === 0) {
+          aContainer.innerHTML = '<p class="text-xs text-slate-400">No hay anuncios pendientes de moderación.</p>';
+        } else {
+          data.pending_ads.forEach(a => {
+            const card = document.createElement('div');
+            card.className = 'p-3 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-between gap-3 text-xs';
+            card.innerHTML = `
+              <div>
+                <span class="font-bold text-white block">${a.title} ($${a.total_budget.toFixed(2)} USD)</span>
+                <span class="text-blue-400">${a.target_url}</span>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="adminActionCampaign(${a.id}, 'reject')" class="px-3 py-1 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white rounded-lg transition">Rechazar</button>
+                <button onclick="adminActionCampaign(${a.id}, 'approve')" class="px-3 py-1 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">Aprobar</button>
+              </div>
+            `;
+            aContainer.appendChild(card);
+          });
+        }
+      } catch (err) {
+        console.error('Error cargando métricas de admin:', err);
+      }
+    }
+
+    async function adminActionWithdrawal(id, action) {
+      await fetch('/api/admin/withdrawals/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ withdrawal_id: id, action })
+      });
+      loadAdminMetrics();
+      loadUserData();
+    }
+
+    async function adminActionCampaign(id, action) {
+      await fetch('/api/admin/campaigns/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign_id: id, action })
+      });
+      loadAdminMetrics();
+    }
+
+    // Inicializar al cargar
+    loadUserData();
+    loadAvailableAds();
+    calcCampBudget();
+    calcWithdrawalFee();
+  </script>
+</body>
+</html>
